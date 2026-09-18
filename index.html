@@ -1,0 +1,153 @@
+/**
+ * e.js - 活動領取與 USDT TRC20 綁定處理邏輯
+ */
+
+// 1. 頁籤切換功能
+function switchTab(tabId) {
+    const buttons = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+
+    buttons.forEach(btn => btn.classList.remove('active'));
+    contents.forEach(content => content.classList.remove('active'));
+
+    const activeBtn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active');
+    }
+
+    const targetContent = document.getElementById(tabId);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+}
+
+// 2. 隨機生成序號 (格式: SPIN-XXXXXX)
+function generateSpinCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `SPIN-${code}`;
+}
+
+// 3. 取得當日日期字串 (YYYY-MM-DD)，用於判斷每日限領一次
+function getTodayDateString() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
+// 4. 免費領取活動邏輯 (支援 localStorage 每日限額判斷)
+function claimReward() {
+    const resultEl = document.getElementById('claim-result');
+    if (!resultEl) return;
+
+    const todayStr = getTodayDateString();
+    const lastClaimDate = localStorage.getItem('last_claim_date');
+    const savedCode = localStorage.getItem('saved_spin_code');
+
+    resultEl.style.display = 'block';
+
+    // 檢查今天是否已經領過
+    if (lastClaimDate === todayStr && savedCode) {
+        resultEl.style.color = 'var(--gold-primary)';
+        resultEl.innerHTML = `⚠️ 今日已領取過序號：<br><strong style="font-size: 18px; color: #fff;">${savedCode}</strong><br><span style="font-size: 11px; color: #a39bb8;">(每日限領 1 次，限當日有效)</span>`;
+        return;
+    }
+
+    // 生成新序號並存入本地儲存庫
+    const newCode = generateSpinCode();
+    localStorage.setItem('last_claim_date', todayStr);
+    localStorage.setItem('saved_spin_code', newCode);
+
+    resultEl.style.color = 'var(--gold-primary)';
+    resultEl.innerHTML = `🎉 領取成功！您的專屬序號：<br><strong style="font-size: 18px; color: #fff;">${newCode}</strong><br><span style="font-size: 11px; color: #a39bb8;">(請妥善保存，限當日有效)</span>`;
+}
+
+// 5. TRON (TRC20) 格式正則驗證：T 開頭且為 Base58 字元，長度正好 34 碼
+function isValidTronAddress(address) {
+    if (!address || typeof address !== 'string') return false;
+    const tronRegex = /^T[1-9A-HJ-NP-za-km-z]{33}$/;
+    return tronRegex.test(address.trim());
+}
+
+// 6. 提交綁定 USDT (TRC20) 地址
+async function submitAddress() {
+    const uidInput = document.getElementById('user-uid');
+    const addressInput = document.getElementById('trc20-address');
+    const resultEl = document.getElementById('usdt-result');
+    const submitBtn = document.querySelector('#usdt-tab .btn-submit');
+
+    if (!resultEl || !uidInput || !addressInput) return;
+
+    const uid = uidInput.value.trim();
+    const address = addressInput.value.trim();
+
+    resultEl.style.display = 'block';
+
+    // 欄位檢查
+    if (!uid) {
+        resultEl.style.color = 'var(--error-color)';
+        resultEl.innerText = '請輸入會員帳號！';
+        uidInput.focus();
+        return;
+    }
+
+    if (!isValidTronAddress(address)) {
+        resultEl.style.color = 'var(--error-color)';
+        resultEl.innerText = '請輸入有效的 USDT TRC20 地址 (T 開頭共 34 碼)！';
+        addressInput.focus();
+        return;
+    }
+
+    // 禁用按鈕防止重複點擊
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = '正在提交中...';
+    }
+
+    try {
+        /* * 若有後端 Webhook (如 Google Apps Script, Cloudflare Worker 或 Render API)，
+         * 可將下列註解解除並填入 URL：
+         *
+         * const response = await fetch('YOUR_BACKEND_API_URL', {
+         * method: 'POST',
+         * headers: { 'Content-Type': 'application/json' },
+         * body: JSON.stringify({ uid: uid, usdt_address: address, timestamp: new Date().toISOString() })
+         * });
+         */
+
+        // 本地暫存紀錄
+        localStorage.setItem('bound_uid', uid);
+        localStorage.setItem('bound_usdt_address', address);
+
+        // 成功反饋
+        resultEl.style.color = 'var(--success-color)';
+        const maskedAddr = address.substring(0, 6) + '...' + address.substring(address.length - 6);
+        resultEl.innerHTML = `✅ 綁定成功！<br>帳號：${uid}<br>錢包：${maskedAddr}`;
+
+    } catch (error) {
+        console.error('提交失敗：', error);
+        resultEl.style.color = 'var(--error-color)';
+        resultEl.innerText = '連線異常，請稍後再試或聯繫客服。';
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = '確認綁定 / 提交資料';
+        }
+    }
+}
+
+// 7. 頁面初始化加載
+document.addEventListener('DOMContentLoaded', () => {
+    // 若先前已綁定過，自動填入輸入框
+    const savedUid = localStorage.getItem('bound_uid');
+    const savedAddr = localStorage.getItem('bound_usdt_address');
+
+    if (savedUid && document.getElementById('user-uid')) {
+        document.getElementById('user-uid').value = savedUid;
+    }
+    if (savedAddr && document.getElementById('trc20-address')) {
+        document.getElementById('trc20-address').value = savedAddr;
+    }
+});
