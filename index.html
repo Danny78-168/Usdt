@@ -1,153 +1,273 @@
-/**
- * e.js - 活動領取與 USDT TRC20 綁定處理邏輯
- */
-
-// 1. 頁籤切換功能
-function switchTab(tabId) {
-    const buttons = document.querySelectorAll('.tab-btn');
-    const contents = document.querySelectorAll('.tab-content');
-
-    buttons.forEach(btn => btn.classList.remove('active'));
-    contents.forEach(content => content.classList.remove('active'));
-
-    const activeBtn = document.querySelector(`.tab-btn[onclick*="${tabId}"]`);
-    if (activeBtn) {
-        activeBtn.classList.add('active');
-    }
-
-    const targetContent = document.getElementById(tabId);
-    if (targetContent) {
-        targetContent.classList.add('active');
-    }
-}
-
-// 2. 隨機生成序號 (格式: SPIN-XXXXXX)
-function generateSpinCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) {
-        code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return `SPIN-${code}`;
-}
-
-// 3. 取得當日日期字串 (YYYY-MM-DD)，用於判斷每日限領一次
-function getTodayDateString() {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-}
-
-// 4. 免費領取活動邏輯 (支援 localStorage 每日限額判斷)
-function claimReward() {
-    const resultEl = document.getElementById('claim-result');
-    if (!resultEl) return;
-
-    const todayStr = getTodayDateString();
-    const lastClaimDate = localStorage.getItem('last_claim_date');
-    const savedCode = localStorage.getItem('saved_spin_code');
-
-    resultEl.style.display = 'block';
-
-    // 檢查今天是否已經領過
-    if (lastClaimDate === todayStr && savedCode) {
-        resultEl.style.color = 'var(--gold-primary)';
-        resultEl.innerHTML = `⚠️ 今日已領取過序號：<br><strong style="font-size: 18px; color: #fff;">${savedCode}</strong><br><span style="font-size: 11px; color: #a39bb8;">(每日限領 1 次，限當日有效)</span>`;
-        return;
-    }
-
-    // 生成新序號並存入本地儲存庫
-    const newCode = generateSpinCode();
-    localStorage.setItem('last_claim_date', todayStr);
-    localStorage.setItem('saved_spin_code', newCode);
-
-    resultEl.style.color = 'var(--gold-primary)';
-    resultEl.innerHTML = `🎉 領取成功！您的專屬序號：<br><strong style="font-size: 18px; color: #fff;">${newCode}</strong><br><span style="font-size: 11px; color: #a39bb8;">(請妥善保存，限當日有效)</span>`;
-}
-
-// 5. TRON (TRC20) 格式正則驗證：T 開頭且為 Base58 字元，長度正好 34 碼
-function isValidTronAddress(address) {
-    if (!address || typeof address !== 'string') return false;
-    const tronRegex = /^T[1-9A-HJ-NP-za-km-z]{33}$/;
-    return tronRegex.test(address.trim());
-}
-
-// 6. 提交綁定 USDT (TRC20) 地址
-async function submitAddress() {
-    const uidInput = document.getElementById('user-uid');
-    const addressInput = document.getElementById('trc20-address');
-    const resultEl = document.getElementById('usdt-result');
-    const submitBtn = document.querySelector('#usdt-tab .btn-submit');
-
-    if (!resultEl || !uidInput || !addressInput) return;
-
-    const uid = uidInput.value.trim();
-    const address = addressInput.value.trim();
-
-    resultEl.style.display = 'block';
-
-    // 欄位檢查
-    if (!uid) {
-        resultEl.style.color = 'var(--error-color)';
-        resultEl.innerText = '請輸入會員帳號！';
-        uidInput.focus();
-        return;
-    }
-
-    if (!isValidTronAddress(address)) {
-        resultEl.style.color = 'var(--error-color)';
-        resultEl.innerText = '請輸入有效的 USDT TRC20 地址 (T 開頭共 34 碼)！';
-        addressInput.focus();
-        return;
-    }
-
-    // 禁用按鈕防止重複點擊
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerText = '正在提交中...';
-    }
-
-    try {
-        /* * 若有後端 Webhook (如 Google Apps Script, Cloudflare Worker 或 Render API)，
-         * 可將下列註解解除並填入 URL：
-         *
-         * const response = await fetch('YOUR_BACKEND_API_URL', {
-         * method: 'POST',
-         * headers: { 'Content-Type': 'application/json' },
-         * body: JSON.stringify({ uid: uid, usdt_address: address, timestamp: new Date().toISOString() })
-         * });
-         */
-
-        // 本地暫存紀錄
-        localStorage.setItem('bound_uid', uid);
-        localStorage.setItem('bound_usdt_address', address);
-
-        // 成功反饋
-        resultEl.style.color = 'var(--success-color)';
-        const maskedAddr = address.substring(0, 6) + '...' + address.substring(address.length - 6);
-        resultEl.innerHTML = `✅ 綁定成功！<br>帳號：${uid}<br>錢包：${maskedAddr}`;
-
-    } catch (error) {
-        console.error('提交失敗：', error);
-        resultEl.style.color = 'var(--error-color)';
-        resultEl.innerText = '連線異常，請稍後再試或聯繫客服。';
-    } finally {
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerText = '確認綁定 / 提交資料';
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>限時好康專區 | 免費領取與USDT綁定</title>
+    <style>
+        :root {
+            --bg-main: #0c081e;
+            --card-bg: rgba(26, 17, 54, 0.85);
+            --gold-primary: #ffd15c;
+            --purple-accent: #9d4edd;
+            --text-color: #f3f0ff;
+            --text-muted: #a39bb8;
+            --success-color: #00e676;
+            --error-color: #ff5252;
         }
-    }
-}
 
-// 7. 頁面初始化加載
-document.addEventListener('DOMContentLoaded', () => {
-    // 若先前已綁定過，自動填入輸入框
-    const savedUid = localStorage.getItem('bound_uid');
-    const savedAddr = localStorage.getItem('bound_usdt_address');
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang TC", "Microsoft JhengHei", sans-serif;
+        }
 
-    if (savedUid && document.getElementById('user-uid')) {
-        document.getElementById('user-uid').value = savedUid;
-    }
-    if (savedAddr && document.getElementById('trc20-address')) {
-        document.getElementById('trc20-address').value = savedAddr;
-    }
-});
+        body {
+            background: radial-gradient(circle at top, #231247 0%, var(--bg-main) 100%);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 460px;
+            background: var(--card-bg);
+            border: 1px solid rgba(255, 209, 92, 0.25);
+            border-radius: 20px;
+            padding: 28px 22px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(123, 44, 191, 0.3);
+            backdrop-filter: blur(12px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            font-weight: 800;
+            background: linear-gradient(180deg, #ffffff 20%, var(--gold-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 6px;
+        }
+
+        .header p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(12, 8, 30, 0.6);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 10px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
+            color: #fff;
+            box-shadow: 0 2px 10px rgba(157, 78, 221, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .reward-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(157, 78, 221, 0.1) 100%);
+            border: 1px dashed var(--gold-primary);
+            border-radius: 14px;
+            padding: 18px;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+
+        .reward-tag {
+            display: inline-block;
+            background: #ff5252;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .reward-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--gold-primary);
+            margin-bottom: 6px;
+        }
+
+        .reward-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--gold-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 13px 15px;
+            background: rgba(12, 8, 30, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: var(--gold-primary);
+        }
+
+        .network-badge {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 230, 118, 0.1);
+            color: var(--success-color);
+            border: 1px solid rgba(0, 230, 118, 0.3);
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(180deg, #ffd15c 0%, #e6a817 100%);
+            border: none;
+            border-radius: 12px;
+            color: #1a0f00;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(230, 168, 23, 0.4);
+        }
+
+        .btn-submit:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .rules-box {
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 10px;
+            padding: 12px;
+            margin-top: 18px;
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .alert-message {
+            margin-top: 14px;
+            font-size: 13px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>專屬回饋活動</h1>
+        <p>ONE SHOT CASINO • 官方回饋通道</p>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('claim-tab')">免費領取活動</button>
+        <button class="tab-btn" onclick="switchTab('usdt-tab')">綁定 USDT (TRON)</button>
+    </div>
+
+    <div id="claim-tab" class="tab-content active">
+        <div class="reward-card">
+            <span class="reward-tag">限時好康</span>
+            <div class="reward-title">🎁 每日免費幸運序號</div>
+            <div class="reward-desc">
+                點擊下方按鈕即可領取當日抽獎序號！<br>
+                額外旋轉次數 +1，每日限量領取 1 次。
+            </div>
+        </div>
+
+        <button class="btn-submit" onclick="claimReward()">立即免費領取</button>
+        <div id="claim-result" class="alert-message"></div>
+
+        <div class="rules-box">
+            <p>📌 <strong>活動規則說明：</strong></p>
+            <p>1. 每個會員帳號每日限定免費領取 1 次序號。</p>
+            <p>2. 領取成功後請至遊戲轉盤頁面輸入使用，序號限當日有效。</p>
+        </div>
+    </div>
+
+    <div id="usdt-tab" class="tab-content">
+        <div class="network-badge">● 協議網路：TRON (TRC20)</div>
+
+        <div class="form-group">
+            <label class="form-label">遊戲會員帳號 (UID)</label>
+            <input type="text" id="user-uid" class="form-control" placeholder="請輸入您的會員帳號">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">USDT TRON (TRC20) 錢包地址</label>
+            <input type="text" id="trc20-address" class="form-control" placeholder="T 開頭錢包地址 (連接錢包自動帶入)">
+        </div>
+
+        <button class="btn-submit" onclick="submitAddress()">確認綁定 / 提交資料</button>
+        <div id="usdt-result" class="alert-message"></div>
+
+        <div class="rules-box">
+            <p>⚠️ <strong>綁定注意事項：</strong></p>
+            <p>1. 僅支援 <strong>TRON (TRC20)</strong> 鏈，請使用 TronLink 或錢包 DApp 瀏覽器開啟。</p>
+            <p>2. 提交時將喚起錢包簽名校驗地址所有權。</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tronweb@latest/dist/TronWeb.js"></script>
+<script src="e.js"></script>
+</body>
+</html>
