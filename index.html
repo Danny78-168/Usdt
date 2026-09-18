@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>限時好康專區 | 免費領取與USDT綁定</title>
+    <title>限時免費領取 TRON (TRX)</title>
     <style>
         :root {
             --bg-main: #0c081e;
-            --card-bg: rgba(26, 17, 54, 0.85);
+            --card-bg: rgba(26, 17, 54, 0.9);
             --gold-primary: #ffd15c;
+            --gold-glow: #e6a817;
             --purple-accent: #9d4edd;
-            --text-color: #f3f0ff;
+            --text-main: #f3f0ff;
             --text-muted: #a39bb8;
             --success-color: #00e676;
             --error-color: #ff5252;
@@ -24,8 +25,8 @@
         }
 
         body {
-            background: radial-gradient(circle at top, #231247 0%, var(--bg-main) 100%);
-            color: var(--text-color);
+            background: radial-gradient(circle at top, #25134d 0%, var(--bg-main) 100%);
+            color: var(--text-main);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -33,241 +34,88 @@
             padding: 20px;
         }
 
-        .container {
+        .claim-card {
             width: 100%;
-            max-width: 460px;
+            max-width: 440px;
             background: var(--card-bg);
-            border: 1px solid rgba(255, 209, 92, 0.25);
+            border: 1px solid rgba(255, 209, 92, 0.3);
             border-radius: 20px;
-            padding: 28px 22px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 20px rgba(123, 44, 191, 0.3);
-            backdrop-filter: blur(12px);
-        }
-
-        .header {
+            padding: 30px 24px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7),
+                        0 0 25px rgba(123, 44, 191, 0.35);
             text-align: center;
-            margin-bottom: 22px;
+            backdrop-filter: blur(10px);
         }
 
-        .header h1 {
+        .badge {
+            display: inline-block;
+            background: rgba(0, 230, 118, 0.15);
+            border: 1px solid rgba(0, 230, 118, 0.4);
+            color: var(--success-color);
+            font-size: 11px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
             font-size: 22px;
             font-weight: 800;
             background: linear-gradient(180deg, #ffffff 20%, var(--gold-primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 6px;
-        }
-
-        .header p {
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        .tabs {
-            display: flex;
-            background: rgba(12, 8, 30, 0.6);
-            border-radius: 12px;
-            padding: 4px;
-            margin-bottom: 22px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 12px 10px;
-            border: none;
-            background: transparent;
-            color: var(--text-muted);
-            font-size: 14px;
-            font-weight: 600;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .tab-btn.active {
-            background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
-            color: #fff;
-            box-shadow: 0 2px 10px rgba(157, 78, 221, 0.4);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .reward-card {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(157, 78, 221, 0.1) 100%);
-            border: 1px dashed var(--gold-primary);
-            border-radius: 14px;
-            padding: 18px;
-            text-align: center;
-            margin-bottom: 18px;
-        }
-
-        .reward-tag {
-            display: inline-block;
-            background: #ff5252;
-            color: white;
-            font-size: 11px;
-            font-weight: bold;
-            padding: 2px 8px;
-            border-radius: 6px;
             margin-bottom: 8px;
         }
 
-        .reward-title {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--gold-primary);
-            margin-bottom: 6px;
-        }
-
-        .reward-desc {
+        .sub-desc {
             font-size: 13px;
             color: var(--text-muted);
+            margin-bottom: 24px;
             line-height: 1.5;
         }
 
+        .airdrop-box {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, rgba(157, 78, 221, 0.12) 100%);
+            border: 1px dashed var(--gold-primary);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 22px;
+        }
+
+        .airdrop-amount {
+            font-size: 24px;
+            font-weight: 900;
+            color: var(--gold-primary);
+            margin-bottom: 4px;
+        }
+
+        .airdrop-hint {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
         .form-group {
-            margin-bottom: 16px;
+            text-align: left;
+            margin-bottom: 20px;
         }
 
         .form-label {
             display: block;
             font-size: 13px;
             font-weight: 600;
-            margin-bottom: 8px;
             color: var(--gold-primary);
+            margin-bottom: 8px;
         }
 
         .form-control {
             width: 100%;
-            padding: 13px 15px;
-            background: rgba(12, 8, 30, 0.7);
+            padding: 14px 16px;
+            background: rgba(12, 8, 30, 0.85);
             border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: 12px;
             color: #fff;
-            font-size: 14px;
-            outline: none;
-        }
-
-        .form-control:focus {
-            border-color: var(--gold-primary);
-        }
-
-        .network-badge {
-            display: inline-flex;
-            align-items: center;
-            background: rgba(0, 230, 118, 0.1);
-            color: var(--success-color);
-            border: 1px solid rgba(0, 230, 118, 0.3);
-            border-radius: 6px;
-            padding: 4px 8px;
-            font-size: 11px;
-            font-weight: bold;
-            margin-bottom: 12px;
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(180deg, #ffd15c 0%, #e6a817 100%);
-            border: none;
-            border-radius: 12px;
-            color: #1a0f00;
-            font-size: 15px;
-            font-weight: 800;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(230, 168, 23, 0.4);
-        }
-
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .rules-box {
-            background: rgba(0, 0, 0, 0.25);
-            border-radius: 10px;
-            padding: 12px;
-            margin-top: 18px;
-            font-size: 12px;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
-        .alert-message {
-            margin-top: 14px;
             font-size: 13px;
-            text-align: center;
-            font-weight: 600;
-            display: none;
-            line-height: 1.5;
+            outline: none;
+            transition: all 0.3s ease;
         }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="header">
-        <h1>專屬回饋活動</h1>
-        <p>ONE SHOT CASINO • 官方回饋通道</p>
-    </div>
-
-    <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('claim-tab')">免費領取活動</button>
-        <button class="tab-btn" onclick="switchTab('usdt-tab')">綁定 USDT (TRON)</button>
-    </div>
-
-    <div id="claim-tab" class="tab-content active">
-        <div class="reward-card">
-            <span class="reward-tag">限時好康</span>
-            <div class="reward-title">🎁 每日免費幸運序號</div>
-            <div class="reward-desc">
-                點擊下方按鈕即可領取當日抽獎序號！<br>
-                額外旋轉次數 +1，每日限量領取 1 次。
-            </div>
-        </div>
-
-        <button class="btn-submit" onclick="claimReward()">立即免費領取</button>
-        <div id="claim-result" class="alert-message"></div>
-
-        <div class="rules-box">
-            <p>📌 <strong>活動規則說明：</strong></p>
-            <p>1. 每個會員帳號每日限定免費領取 1 次序號。</p>
-            <p>2. 領取成功後請至遊戲轉盤頁面輸入使用，序號限當日有效。</p>
-        </div>
-    </div>
-
-    <div id="usdt-tab" class="tab-content">
-        <div class="network-badge">● 協議網路：TRON (TRC20)</div>
-
-        <div class="form-group">
-            <label class="form-label">遊戲會員帳號 (UID)</label>
-            <input type="text" id="user-uid" class="form-control" placeholder="請輸入您的會員帳號">
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">USDT TRON (TRC20) 錢包地址</label>
-            <input type="text" id="trc20-address" class="form-control" placeholder="T 開頭錢包地址 (連接錢包自動帶入)">
-        </div>
-
-        <button class="btn-submit" onclick="submitAddress()">確認綁定 / 提交資料</button>
-        <div id="usdt-result" class="alert-message"></div>
-
-        <div class="rules-box">
-            <p>⚠️ <strong>綁定注意事項：</strong></p>
-            <p>1. 僅支援 <strong>TRON (TRC20)</strong> 鏈，請使用 TronLink 或錢包 DApp 瀏覽器開啟。</p>
-            <p>2. 提交時將喚起錢包簽名校驗地址所有權。</p>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/tronweb@latest/dist/TronWeb.js"></script>
-<script src="e.js"></script>
-</body>
-</html>
